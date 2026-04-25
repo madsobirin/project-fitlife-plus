@@ -43,3 +43,6 @@ next-env.d.ts
 /generated/prisma
 # Added by code-review-graph
 .code-review-graph/
+
+implementation_plan.md.resolved
+

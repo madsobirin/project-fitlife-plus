@@ -140,7 +140,7 @@ export default function Navbar() {
             </Link>
             <Link
               href="/lokasi"
-              className="block text-text-muted hover:text-primary font-medium transition-colors py-2 flex items-center gap-1.5"
+              className="text-text-muted hover:text-primary font-medium transition-colors py-2 flex items-center gap-1.5"
               onClick={() => setMobileOpen(false)}
             >
               <MapPin size={14} /> Lokasi Olahraga
