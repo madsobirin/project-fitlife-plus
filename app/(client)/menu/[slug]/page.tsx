@@ -299,7 +299,7 @@ export default function MenuDetailPage() {
 
               {/* BMI CTA */}
               <Link
-                href="/kalkulator-bmi"
+                href="/kalkulator"
                 className="flex items-center gap-2 bg-primary/10 border border-primary/25 text-primary px-4 py-2 rounded-xl text-xs font-black hover:bg-primary/20 transition-all group"
               >
                 Cocokkan dengan BMI Anda
