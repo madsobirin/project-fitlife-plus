@@ -1,0 +1,15 @@
+model Perhitungan {
+  id           Int @id @default(autoincrement())
+  user_id      Int
+  tinggi_badan Float
+  berat_badan  Float
+  bmi          Float
+  status       String
+
+  created_at DateTime? @default(now())
+  updated_at DateTime? @updatedAt
+
+  account Account @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("perhitungan")
+}

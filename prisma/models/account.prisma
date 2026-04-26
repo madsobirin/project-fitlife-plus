@@ -1,0 +1,31 @@
+model Account {
+  id           Int    @id @default(autoincrement())
+
+  name String?
+  username     String?  @unique
+  email        String  @unique
+
+  google_id String?
+
+  role String @default("user")
+
+  password String?
+
+  created_at DateTime? @default(now())
+  updated_at DateTime? @updatedAt
+
+  is_active Boolean @default(true)
+
+  last_login_at DateTime?
+  phone         String?
+  birthdate     DateTime?
+  weight        Int?
+  height        Int?
+  photo         String?
+  google_avatar String?
+
+  perhitungan     Perhitungan[]
+  lokasiOlahraga  LokasiOlahraga[]
+
+  @@map("accounts")
+}

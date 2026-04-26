@@ -1,0 +1,1311 @@
+openapi: 3.0.3
+info:
+  title: FitLife API
+  description: |
+    REST API untuk aplikasi FitLife — platform nutrisi dan kesehatan berbasis Next.js.
+
+    ## Autentikasi
+    API ini mendukung dua metode autentikasi:
+    1. **JWT Bearer Token** (direkomendasikan untuk Flutter/mobile) — kirim token di header `Authorization: Bearer <token>`
+    2. **Cookie httpOnly** (untuk web browser) — cookie `token` di-set otomatis setelah login
+
+    Token JWT berlaku selama **7 hari** dan berisi payload: `userId`, `role`, `email`.
+
+    ## Base URL
+    - **Lokal:** `http://localhost:3000`
+    - **Produksi:** `https://<domain-anda>.vercel.app`
+  version: "1.0.0"
+  contact:
+    name: FitLife Dev Team
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://your-domain.vercel.app
+    description: Production server (Vercel)
+
+tags:
+  - name: Auth
+    description: Autentikasi dan manajemen sesi
+  - name: Profile
+    description: Profil user yang sedang login
+  - name: Menus
+    description: Data menu makanan
+  - name: Artikels
+    description: Artikel kesehatan dan nutrisi
+  - name: Perhitungan
+    description: Kalkulator BMI
+  - name: Accounts
+    description: Manajemen akun (Admin)
+  - name: Admin
+    description: Dashboard admin
+  - name: Upload
+    description: Upload gambar ke Cloudinary
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Token JWT diperoleh dari response login/register. Gunakan di header:
+        `Authorization: Bearer <token>`
+
+  schemas:
+    # ── Auth ──────────────────────────────────────────────
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: "Budi Santoso"
+        email:
+          type: string
+          format: email
+          example: "budi@example.com"
+        password:
+          type: string
+          minLength: 8
+          example: "password123"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "budi@example.com"
+        password:
+          type: string
+          example: "password123"
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Login berhasil"
+        token:
+          type: string
+          description: JWT Bearer token untuk dipakai di mobile client
+          example: "eyJhbGciOiJIUzI1NiJ9..."
+        user:
+          $ref: '#/components/schemas/UserBasic'
+
+    GoogleAuthRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: Google Access Token dari google_sign_in package Flutter
+          example: "ya29.a0AfH..."
+
+    # ── User ──────────────────────────────────────────────
+    UserBasic:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Budi Santoso"
+        email:
+          type: string
+          example: "budi@example.com"
+        role:
+          type: string
+          enum: [user, admin]
+          example: "user"
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Budi Santoso"
+        username:
+          type: string
+          nullable: true
+          example: "budi_s"
+        email:
+          type: string
+          example: "budi@example.com"
+        role:
+          type: string
+          enum: [user, admin]
+          example: "user"
+        phone:
+          type: string
+          nullable: true
+          example: "08123456789"
+        birthdate:
+          type: string
+          format: date-time
+          nullable: true
+          example: "1995-06-15T00:00:00.000Z"
+        weight:
+          type: integer
+          nullable: true
+          description: Berat badan dalam kg
+          example: 70
+        height:
+          type: integer
+          nullable: true
+          description: Tinggi badan dalam cm
+          example: 170
+        photo:
+          type: string
+          nullable: true
+          description: URL foto profil dari Cloudinary
+          example: "https://res.cloudinary.com/..."
+        google_avatar:
+          type: string
+          nullable: true
+          description: URL avatar dari Google OAuth
+        created_at:
+          type: string
+          format: date-time
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Budi Santoso"
+        username:
+          type: string
+          example: "budi_santoso"
+        phone:
+          type: string
+          example: "08123456789"
+        birthdate:
+          type: string
+          format: date
+          example: "1995-06-15"
+        weight:
+          type: integer
+          example: 70
+        height:
+          type: integer
+          example: 170
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          example: "password_lama"
+        newPassword:
+          type: string
+          minLength: 8
+          example: "password_baru_123"
+
+    # ── Menu ──────────────────────────────────────────────
+    Menu:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        slug:
+          type: string
+          example: "nasi-merah-dengan-sayur-1710000000000"
+        nama_menu:
+          type: string
+          example: "Nasi Merah dengan Sayur"
+        deskripsi:
+          type: string
+          example: "Menu sehat untuk diet"
+        target_status:
+          type: string
+          enum: [Kurus, Normal, Berlebih, Obesitas]
+          example: "Normal"
+        kalori:
+          type: number
+          example: 350
+        gambar_url:
+          type: string
+          nullable: true
+          example: "https://res.cloudinary.com/..."
+        dibaca:
+          type: integer
+          description: Jumlah kali dibaca (view count)
+          example: 42
+        created_at:
+          type: string
+          format: date-time
+
+    MenuRequest:
+      type: object
+      required: [nama_menu, deskripsi, target_status, kalori]
+      properties:
+        nama_menu:
+          type: string
+          example: "Nasi Merah dengan Sayur"
+        deskripsi:
+          type: string
+          example: "Menu sehat untuk diet"
+        target_status:
+          type: string
+          enum: [Kurus, Normal, Berlebih, Obesitas]
+          example: "Normal"
+        kalori:
+          type: number
+          example: 350
+        gambar_url:
+          type: string
+          nullable: true
+          example: "https://res.cloudinary.com/..."
+
+    PaginatedMenus:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Menu'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ── Artikel ───────────────────────────────────────────
+    Artikel:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        slug:
+          type: string
+          example: "tips-diet-sehat-1710000000000"
+        judul:
+          type: string
+          example: "Tips Diet Sehat untuk Pemula"
+        konten:
+          type: string
+          example: "Isi artikel..."
+        kategori:
+          type: string
+          example: "Nutrisi"
+        gambar_url:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+
+    ArtikelRequest:
+      type: object
+      required: [judul, konten, kategori]
+      properties:
+        judul:
+          type: string
+          example: "Tips Diet Sehat untuk Pemula"
+        konten:
+          type: string
+          example: "Isi artikel lengkap..."
+        kategori:
+          type: string
+          example: "Nutrisi"
+        gambar_url:
+          type: string
+          nullable: true
+        is_featured:
+          type: boolean
+          example: false
+
+    PaginatedArtikels:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artikel'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ── Perhitungan ───────────────────────────────────────
+    PerhitunganRequest:
+      type: object
+      required: [tinggi_badan, berat_badan]
+      properties:
+        tinggi_badan:
+          type: number
+          description: Tinggi badan dalam cm
+          example: 170
+        berat_badan:
+          type: number
+          description: Berat badan dalam kg
+          example: 70
+
+    PerhitunganResponse:
+      type: object
+      properties:
+        bmi:
+          type: number
+          description: Nilai BMI (1 desimal)
+          example: 24.2
+        status:
+          type: string
+          enum: [Kurus, Normal, Berlebih, Obesitas]
+          example: "Normal"
+
+    PerhitunganHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        tinggi_badan:
+          type: number
+          example: 170
+        berat_badan:
+          type: number
+          example: 70
+        bmi:
+          type: number
+          example: 24.2
+        status:
+          type: string
+          example: "Normal"
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Account (Admin) ───────────────────────────────────
+    Account:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Budi Santoso"
+        email:
+          type: string
+          example: "budi@example.com"
+        phone:
+          type: string
+          nullable: true
+        photo:
+          type: string
+          nullable: true
+        google_avatar:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          example: true
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Dashboard ─────────────────────────────────────────
+    DashboardResponse:
+      type: object
+      properties:
+        stats:
+          type: object
+          properties:
+            totalPengguna:
+              type: integer
+              example: 120
+            penggunaAktif:
+              type: integer
+              example: 98
+            totalMenu:
+              type: integer
+              example: 45
+            totalArtikel:
+              type: integer
+              example: 30
+        menuTerbaru:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              nama_menu:
+                type: string
+              dibaca:
+                type: integer
+        penggunaTerbaru:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              email:
+                type: string
+              is_active:
+                type: boolean
+              last_login_at:
+                type: string
+                format: date-time
+                nullable: true
+
+    # ── Upload ────────────────────────────────────────────
+    UploadMenuResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          description: URL gambar yang sudah diupload ke Cloudinary
+          example: "https://res.cloudinary.com/fitlife/image/upload/..."
+
+    UploadProfileResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Foto berhasil diupload"
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    # ── Common ────────────────────────────────────────────
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 100
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        totalPages:
+          type: integer
+          example: 10
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPrevPage:
+          type: boolean
+          example: false
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Unauthorized"
+
+    ValidationError:
+      type: object
+      properties:
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            email: ["Invalid email format"]
+            password: ["Password minimal 8 karakter"]
+
+paths:
+  # ============================================================
+  # AUTH
+  # ============================================================
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrasi akun baru
+      description: |
+        Membuat akun baru. Setelah berhasil, akan langsung mengembalikan JWT token
+        yang bisa langsung dipakai tanpa harus login ulang.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registrasi berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                message: "Registrasi berhasil"
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                user:
+                  id: 1
+                  name: "Budi Santoso"
+                  email: "budi@example.com"
+                  role: "user"
+        '400':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '409':
+          description: Email sudah terdaftar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "Email sudah terdaftar."
+        '500':
+          description: Internal Server Error
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login dengan email & password
+      description: |
+        Login user. Response berisi JWT token yang harus disimpan oleh Flutter
+        di `SharedPreferences` atau `FlutterSecureStorage`.
+
+        Server juga menyimpan token ke cookie httpOnly `token` (untuk web).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                message: "Login berhasil"
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                user:
+                  id: 1
+                  name: "Budi Santoso"
+                  email: "budi@example.com"
+                  role: "user"
+        '400':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Email atau password salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "Email atau password salah."
+        '500':
+          description: Internal Server Error
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout user
+      description: |
+        Menghapus cookie token dari server.
+
+        **Untuk Flutter:** cukup hapus token yang tersimpan di `SharedPreferences`/`SecureStorage`
+        secara lokal. Tetap bisa memanggil endpoint ini untuk membersihkan sesi web.
+      responses:
+        '200':
+          description: Logout berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logout berhasil"
+        '500':
+          description: Internal Server Error
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Cek user yang sedang login
+      description: Mengembalikan data user berdasarkan token JWT.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Data user aktif
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized (token tidak ada / expired)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User tidak ditemukan
+        '500':
+          description: Internal Server Error
+
+  /api/auth/google:
+    post:
+      tags: [Auth]
+      summary: Login dengan Google OAuth
+      description: |
+        Menerima **Google Access Token** dari Flutter dan memvalidasinya ke Google API.
+        Jika user belum terdaftar, akan dibuat akun baru secara otomatis.
+
+        **Flutter:** gunakan package `google_sign_in` untuk mendapatkan `accessToken`,
+        lalu kirimkan ke endpoint ini.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+            example:
+              token: "ya29.a0AfH6SMB..."
+      responses:
+        '200':
+          description: Login Google berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                message: "Login Berhasil"
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                role: "user"
+                user:
+                  id: 5
+                  name: "Ani Rahayu"
+                  email: "ani@gmail.com"
+                  role: "user"
+        '400':
+          description: Token Google tidak ditemukan atau tidak valid
+        '401':
+          description: Token Google tidak valid
+        '500':
+          description: Internal Server Error
+
+  # ============================================================
+  # PROFILE
+  # ============================================================
+  /api/profile:
+    get:
+      tags: [Profile]
+      summary: Ambil profil user yang login
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Data profil user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User tidak ditemukan
+
+    patch:
+      tags: [Profile]
+      summary: Update profil user
+      description: Update data profil. Semua field opsional — hanya field yang dikirim yang akan diupdate.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profil berhasil diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Profil diperbarui"
+                  user:
+                    $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized
+        '409':
+          description: Username sudah digunakan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "Username sudah digunakan"
+
+  /api/profile/upload:
+    post:
+      tags: [Profile]
+      summary: Upload foto profil user
+      description: |
+        Upload foto profil ke Cloudinary. Format: `multipart/form-data`.
+        Foto lama akan otomatis di-overwrite.
+
+        **Batasan:**
+        - Format: JPEG, JPG, PNG, WebP
+        - Ukuran maksimal: **2MB**
+        - Gambar akan di-crop ke 400×400 dengan fokus wajah
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: File gambar (JPEG/PNG/WebP, max 2MB)
+      responses:
+        '200':
+          description: Foto berhasil diupload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadProfileResponse'
+        '400':
+          description: File tidak ada, tipe tidak didukung, atau ukuran terlalu besar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+
+  /api/profile/password:
+    patch:
+      tags: [Profile]
+      summary: Ganti password user
+      description: |
+        Hanya tersedia untuk akun yang mendaftar dengan email/password
+        (bukan Google OAuth).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password berhasil diubah
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password berhasil diubah"
+        '400':
+          description: Akun tidak menggunakan password
+        '401':
+          description: Unauthorized atau password saat ini salah
+        '500':
+          description: Internal Server Error
+
+  # ============================================================
+  # MENUS
+  # ============================================================
+  /api/menus:
+    get:
+      tags: [Menus]
+      summary: Ambil daftar menu
+      description: |
+        Ambil semua menu makanan. Mendukung filter berdasarkan `target` dan `id`,
+        serta **pagination opsional** dengan `page` dan `limit`.
+
+        - Tanpa `page`/`limit`: mengembalikan array biasa (backward compatible)
+        - Dengan `page`/`limit`: mengembalikan objek dengan `data` dan `meta`
+      parameters:
+        - name: target
+          in: query
+          description: Filter berdasarkan target status
+          schema:
+            type: string
+            enum: [Kurus, Normal, Berlebih, Obesitas]
+          example: Normal
+        - name: id
+          in: query
+          description: Filter berdasarkan ID menu
+          schema:
+            type: integer
+          example: 1
+        - name: page
+          in: query
+          description: Nomor halaman (aktifkan mode pagination)
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Jumlah item per halaman
+          schema:
+            type: integer
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Daftar menu
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Menu'
+                    description: Response tanpa pagination
+                  - $ref: '#/components/schemas/PaginatedMenus'
+                    description: Response dengan pagination
+        '400':
+          description: Target status tidak valid atau ID tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+
+    post:
+      tags: [Menus]
+      summary: Tambah menu baru
+      description: |
+        Menambahkan menu baru ke database. Slug di-generate otomatis dari `nama_menu`.
+
+        > ⚠️ **Catatan Keamanan:** Endpoint ini belum dilindungi role admin.
+        > Semua user (termasuk yang tidak login) bisa mengaksesnya.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuRequest'
+      responses:
+        '201':
+          description: Menu berhasil ditambahkan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Menu berhasil ditambahkan"
+                  data:
+                    $ref: '#/components/schemas/Menu'
+        '400':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Internal Server Error
+
+  /api/menus/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        description: Slug unik menu
+        schema:
+          type: string
+        example: "nasi-merah-dengan-sayur-1710000000000"
+
+    get:
+      tags: [Menus]
+      summary: Detail menu berdasarkan slug
+      description: Mengambil detail satu menu. View count (`dibaca`) akan otomatis bertambah.
+      responses:
+        '200':
+          description: Data menu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Menu'
+        '404':
+          description: Menu tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+
+    put:
+      tags: [Menus]
+      summary: Update menu (full update)
+      description: |
+        Update data menu secara penuh. Slug akan di-regenerate dari `nama_menu` baru.
+
+        > ⚠️ **Catatan Keamanan:** Belum dilindungi role admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuRequest'
+      responses:
+        '200':
+          description: Menu berhasil diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Berhasil diperbarui"
+                  data:
+                    $ref: '#/components/schemas/Menu'
+        '400':
+          description: Validasi gagal
+        '404':
+          description: Menu tidak ditemukan
+        '500':
+          description: Internal Server Error
+
+    delete:
+      tags: [Menus]
+      summary: Hapus menu
+      description: |
+        Menghapus menu berdasarkan slug.
+
+        > ⚠️ **Catatan Keamanan:** Belum dilindungi role admin.
+      responses:
+        '200':
+          description: Menu berhasil dihapus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Menu berhasil dihapus"
+        '404':
+          description: Menu tidak ditemukan
+        '500':
+          description: Internal Server Error
+
+  # ============================================================
+  # ARTIKELS
+  # ============================================================
+  /api/artikels:
+    get:
+      tags: [Artikels]
+      summary: Ambil daftar artikel
+      description: |
+        Ambil semua artikel. Mendukung filter berdasarkan `kategori`, `slug`, `id`,
+        dan `featured`. Juga mendukung **pagination opsional**.
+      parameters:
+        - name: kategori
+          in: query
+          description: Filter berdasarkan kategori artikel
+          schema:
+            type: string
+          example: "Nutrisi"
+        - name: slug
+          in: query
+          description: Ambil satu artikel by slug
+          schema:
+            type: string
+          example: "tips-diet-sehat-1710000000000"
+        - name: id
+          in: query
+          description: Ambil satu artikel by ID
+          schema:
+            type: integer
+          example: 1
+        - name: featured
+          in: query
+          description: Filter artikel featured saja
+          schema:
+            type: boolean
+          example: true
+        - name: page
+          in: query
+          description: Nomor halaman (aktifkan pagination)
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Jumlah item per halaman
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Daftar artikel
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Artikel'
+                    description: Response tanpa pagination
+                  - $ref: '#/components/schemas/PaginatedArtikels'
+                    description: Response dengan pagination
+        '500':
+          description: Internal Server Error
+
+    post:
+      tags: [Artikels]
+      summary: Tambah artikel baru
+      description: |
+        Menambahkan artikel baru. Slug di-generate otomatis dari `judul`.
+
+        > ⚠️ **Catatan Keamanan:** Belum dilindungi role admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArtikelRequest'
+      responses:
+        '201':
+          description: Artikel berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artikel'
+        '400':
+          description: Validasi gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '500':
+          description: Internal Server Error
+
+  # ============================================================
+  # PERHITUNGAN BMI
+  # ============================================================
+  /api/perhitungan:
+    post:
+      tags: [Perhitungan]
+      summary: Hitung BMI
+      description: |
+        Menghitung BMI berdasarkan tinggi dan berat badan.
+
+        Jika user sedang login (token dikirim), hasil perhitungan akan otomatis
+        disimpan ke riwayat. Jika tidak login, tetap mengembalikan hasil tanpa menyimpan.
+      security:
+        - BearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerhitunganRequest'
+      responses:
+        '200':
+          description: Hasil perhitungan BMI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerhitunganResponse'
+              example:
+                bmi: 24.2
+                status: "Normal"
+        '400':
+          description: Data tidak lengkap atau tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+
+    get:
+      tags: [Perhitungan]
+      summary: Riwayat perhitungan BMI user
+      description: |
+        Mengembalikan 10 riwayat perhitungan BMI terakhir untuk user yang sedang login.
+
+        **Membutuhkan autentikasi.**
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Riwayat perhitungan BMI
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PerhitunganHistory'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+
+  # ============================================================
+  # ACCOUNTS (Admin)
+  # ============================================================
+  /api/accounts:
+    get:
+      tags: [Accounts]
+      summary: Daftar semua akun (Admin)
+      description: |
+        Mengembalikan daftar semua akun user. Bisa difilter berdasarkan `role`.
+
+        > ⚠️ **Catatan Keamanan:** Belum dilindungi. Sebaiknya hanya diakses admin.
+      parameters:
+        - name: role
+          in: query
+          description: Filter berdasarkan role
+          schema:
+            type: string
+            enum: [user, admin]
+          example: "user"
+      responses:
+        '200':
+          description: Daftar akun
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        '500':
+          description: Internal Server Error
+
+  # ============================================================
+  # ADMIN DASHBOARD
+  # ============================================================
+  /api/admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Data statistik dashboard admin
+      description: |
+        Mengembalikan statistik ringkasan: total pengguna, pengguna aktif,
+        total menu, total artikel, serta menu & pengguna terbaru.
+
+        > ⚠️ **Catatan Keamanan:** Belum dilindungi role. Sebaiknya hanya diakses admin.
+      responses:
+        '200':
+          description: Data dashboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '500':
+          description: Internal Server Error
+
+  # ============================================================
+  # UPLOAD
+  # ============================================================
+  /api/upload/menu:
+    post:
+      tags: [Upload]
+      summary: Upload gambar menu ke Cloudinary
+      description: |
+        Upload gambar untuk menu makanan. Gambar akan di-resize ke 800×600.
+
+        **Batasan:**
+        - Format: JPEG, JPG, PNG, WebP
+        - Ukuran maksimal: **3MB**
+
+        **Membutuhkan autentikasi.**
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File gambar (JPEG/PNG/WebP, max 3MB)
+                folder:
+                  type: string
+                  description: Folder Cloudinary (opsional)
+                  default: "fitlife/menus"
+                  example: "fitlife/menus"
+      responses:
+        '200':
+          description: Gambar berhasil diupload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadMenuResponse'
+              example:
+                url: "https://res.cloudinary.com/fitlife/image/upload/..."
+        '400':
+          description: File tidak ada, tipe tidak didukung, atau terlalu besar
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
